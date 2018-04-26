@@ -1,0 +1,53 @@
+version: '2'
+services:
+    nginx-proxy:
+      image: jwilder/nginx-proxy
+      restart: always
+      ports:
+          - "80:80"
+          - "443:443"
+      volumes:
+          - "./letsencrypt/vhost.d:/etc/nginx/vhost.d"
+          - "./letsencrypt/html:/usr/share/nginx/html"
+          - "./letsencrypt/certs:/etc/nginx/certs"
+          - "/var/run/docker.sock:/tmp/docker.sock:ro"
+          - ./etc/nginx-proxy/nginx.conf:/etc/nginx/nginx.conf
+          - "./etc/nginx-proxy/z_ikon.conf:/etc/nginx/conf.d/z_ikon.conf"
+      depends_on:
+          - nginx
+
+    letsencrypt-nginx-proxy-companion:
+      image: jrcs/letsencrypt-nginx-proxy-companion
+      restart: always
+      volumes:
+          - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      volumes_from:
+          - "nginx-proxy"
+    nginx:
+      volumes:
+          - ./etc/nginx/conf.d/pimpmylog.conf:/etc/nginx/conf.d/pimpmylog.conf
+          - ./etc/nginx/conf.d/phpmyadmin.conf:/etc/nginx/conf.d/phpmyadmin.conf
+          - ./etc/nginx/conf.d/phpmemadmin.conf:/etc/nginx/conf.d/phpmemadmin.conf
+          - ./web-admins/pimpmylog/PimpMyLog:/home/pimpmylog/
+          - ./web-admins/phpmyadmin/phpMyAdmin:/home/phpmyadmin/
+          - ./web-admins/phpmemadmin/phpMemAdmin:/home/phpmemadmin/
+      environment:
+             - VIRTUAL_HOST=${NGINX_HOST},logs.${NGINX_HOST},phpmyadmin.${NGINX_HOST},phpmemadmin.${NGINX_HOST},dev.${NGINX_HOST},static1.${NGINX_HOST},static2.${NGINX_HOST},static3.${NGINX_HOST}
+             - LETSENCRYPT_HOST=${NGINX_HOST},logs.${NGINX_HOST},phpmyadmin.${NGINX_HOST},phpmemadmin.${NGINX_HOST},dev.${NGINX_HOST},static1.${NGINX_HOST},static2.${NGINX_HOST},static3.${NGINX_HOST}
+    php:
+        depends_on:
+            - ftp
+        volumes:
+            - ./logs/nginx/:/var/log/nginx/ # for pimpmylog
+            - ./web-admins/pimpmylog/PimpMyLog:/home/pimpmylog/
+            - ./web-admins/phpmyadmin/phpMyAdmin:/home/phpmyadmin/
+            - ./web-admins/phpmemadmin/phpMemAdmin:/home/phpmemadmin/
+    ftp:
+      image: stilliard/pure-ftpd
+      restart: always
+      ports:
+            - "21:21"
+            - "30000-30009:30000-30009"
+      volumes:
+            - ./etc/pure-ftpd/:/etc/pure-ftpd/
+            - ./${FTP_DIR}:/var/www/html/public

@@ -1,0 +1,29 @@
+version: '2'
+services:
+    nginx-proxy:
+      image: jwilder/nginx-proxy
+      restart: always
+      ports:
+          - "80:80"
+          - "443:443"
+      volumes:
+          - "/var/run/docker.sock:/tmp/docker.sock:ro"
+      depends_on:
+          - nginx
+    nginx:
+      image: nginx:latest
+      restart: always
+      volumes:
+          - ./etc/nginx/nginx.conf:/etc/nginx/nginx.conf
+          - ./${SOURCES_DIR}:/var/www/html/
+      environment:
+             - VIRTUAL_HOST=${NGINX_HOST}
+    google-fonts:
+      image: luizcarlosfaria/nginx-pagespeed
+      restart: always
+      volumes:
+          - ./etc/nginx/nginx.conf:/etc/nginx/nginx.conf
+          - ./etc/nginx/google-fonts/google-fonts-proxy-common:/etc/nginx/conf.d/google-fonts-proxy-common
+          - ./etc/nginx/google-fonts/google-fonts-proxy.conf:/etc/nginx/conf.d/google-fonts-proxy.conf
+      environment:
+             - VIRTUAL_HOST=fonts.${NGINX_HOST},fonts-gstatic.${NGINX_HOST}
